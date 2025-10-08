@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Discord Webhook Sender</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #1e1e2f, #2a2a3d);
+      font-family: 'Orbitron', sans-serif;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background: #2e2e3e;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      width: 500px;
+      text-align: center;
+      overflow-y: auto;
+      max-height: 90vh;
+    }
+    input, textarea, button {
+      width: 100%;
+      margin: 10px 0;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+    }
+    button {
+      background: #00bcd4;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    button:hover {
+      background: #0097a7;
+    }
+    .webhook-list {
+      text-align: left;
+      margin-top: 10px;
+    }
+    .webhook-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #3a3a4a;
+      padding: 8px;
+      border-radius: 6px;
+      margin-bottom: 5px;
+    }
+    .log-panel {
+      background: #1a1a2a;
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 8px;
+      text-align: left;
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 0.9em;
+    }
+    .log-entry {
+      margin-bottom: 8px;
+      border-bottom: 1px solid #444;
+      padding-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Discord Webhook Sender</h2>
+    <input type="text" id="webhookInput" placeholder="Paste Discord Webhook URL" />
+    <button onclick="saveWebhook()">💾 Save Webhook</button>
+
+    <div class="webhook-list" id="webhookList"></div>
+
+    <textarea id="message" placeholder="Type your message..."></textarea>
+    <input type="file" id="fileInput" />
+    <button onclick="sendMessage()">🚀 Send Message</button>
+    <p id="status"></p>
+
+    <div class="log-panel" id="logPanel">
+      <strong>📜 Message Log:</strong>
+    </div>
+  </div>
+
+  <script>
+    let selectedWebhook = '';
+
+    function saveWebhook() {
+      const input = document.getElementById('webhookInput').value.trim();
+      if (!input) return;
+
+      let webhooks = JSON.parse(localStorage.getItem('webhooks') || '[]');
+      if (!webhooks.includes(input)) {
+        webhooks.push(input);
+        localStorage.setItem('webhooks', JSON.stringify(webhooks));
+        renderWebhookList();
+        document.getElementById('webhookInput').value = '';
+      }
+    }
+
+    function renderWebhookList() {
+      const list = document.getElementById('webhookList');
+      list.innerHTML = '';
+      const webhooks = JSON.parse(localStorage.getItem('webhooks') || '[]');
+
+      webhooks.forEach((url, index) => {
+        const item = document.createElement('div');
+        item.className = 'webhook-item';
+
+        const label = document.createElement('span');
+        label.textContent = url.length > 40 ? url.slice(0, 40) + '...' : url;
+        label.onclick = () => {
+          selectedWebhook = url;
+          document.getElementById('status').textContent = `✅ Selected webhook`;
+        };
+
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '🗑️';
+        delBtn.onclick = () => {
+          webhooks.splice(index, 1);
+          localStorage.setItem('webhooks', JSON.stringify(webhooks));
+          renderWebhookList();
+          if (selectedWebhook === url) {
+            selectedWebhook = '';
+            document.getElementById('status').textContent = `⚠️ Webhook removed`;
+          }
+        };
+
+        item.appendChild(label);
+        item.appendChild(delBtn);
+        list.appendChild(item);
+      });
+    }
+
+    function addToLog(message, fileName) {
+      const logPanel = document.getElementById('logPanel');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+
+      const timestamp = new Date().toLocaleString();
+      entry.innerHTML = `<strong>[${timestamp}]</strong><br>${message || '(no message)'}${fileName ? `<br>📎 File: ${fileName}` : ''}`;
+      logPanel.appendChild(entry);
+      logPanel.scrollTop = logPanel.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const message = document.getElementById('message').value;
+      const fileInput = document.getElementById('fileInput');
+      const file = fileInput.files[0];
+      const status = document.getElementById('status');
+
+      if (!selectedWebhook) {
+        status.textContent = "❌ No webhook selected!";
+        return;
+      }
+
+      const formData = new FormData();
+      if (message) formData.append('content', `[${new Date().toISOString().replace('T', ' ').split('.')[0]}] ${message}`);
+      if (file) formData.append('file', file);
+
+      try {
+        await fetch(selectedWebhook, {
+          method: 'POST',
+          body: formData
+        });
+        status.textContent = "✅ Message sent!";
+        addToLog(message, file ? file.name : null);
+        document.getElementById('message').value = '';
+        fileInput.value = '';
+      } catch (err) {
+        status.textContent = "❌ Failed to send.";
+      }
+    }
+
+    renderWebhookList();
+  </script>
+</body>
+</html>

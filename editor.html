@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Video Editor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: #121212;
+      font-family: 'Orbitron', sans-serif;
+      color: #fff;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    video {
+      max-width: 90%;
+      margin-top: 20px;
+      border: 2px solid #00bcd4;
+      border-radius: 8px;
+    }
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 300px;
+    }
+    input, button {
+      padding: 10px;
+      border-radius: 6px;
+      border: none;
+      font-size: 1em;
+    }
+    button {
+      background: #00bcd4;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0097a7;
+    }
+    .overlay {
+      position: absolute;
+      color: white;
+      font-size: 24px;
+      pointer-events: none;
+      top: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      text-shadow: 2px 2px 4px #000;
+    }
+    .video-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <h2>🎬 Video Editor</h2>
+  <div class="controls">
+    <input type="file" id="videoInput" accept="video/*" />
+    <input type="text" id="overlayText" placeholder="Text overlay..." />
+    <label>Start Time (sec): <input type="number" id="startTime" min="0" value="0" /></label>
+    <label>End Time (sec): <input type="number" id="endTime" min="0" value="10" /></label>
+    <button onclick="applyEdits()">▶️ Apply Edits</button>
+  </div>
+
+  <div class="video-wrapper">
+    <video id="video" controls></video>
+    <div class="overlay" id="textOverlay"></div>
+  </div>
+
+  <script>
+    const video = document.getElementById('video');
+    const videoInput = document.getElementById('videoInput');
+    const textOverlay = document.getElementById('textOverlay');
+
+    videoInput.addEventListener('change', () => {
+      const file = videoInput.files[0];
+      if (file) {
+        const url = URL.createObjectURL(file);
+        video.src = url;
+        video.load();
+      }
+    });
+
+    function applyEdits() {
+      const overlayText = document.getElementById('overlayText').value;
+      const start = parseFloat(document.getElementById('startTime').value);
+      const end = parseFloat(document.getElementById('endTime').value);
+
+      textOverlay.textContent = overlayText;
+
+      video.currentTime = start;
+      video.play();
+
+      const interval = setInterval(() => {
+        if (video.currentTime >= end) {
+          video.pause();
+          clearInterval(interval);
+        }
+      }, 200);
+    }
+  </script>
+</body>
+</html>

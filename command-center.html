@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Roblox Command Center</title>
+  <style>
+    body {
+      background: #121212;
+      color: #fff;
+      font-family: 'Orbitron', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    canvas {
+      border: 2px solid #00bcd4;
+      background: #1e1e2f;
+      margin: 10px;
+    }
+    .controls button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 1em;
+      background: #00bcd4;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      cursor: pointer;
+    }
+    .controls button:hover {
+      background: #0097a7;
+    }
+    .player-list {
+      margin-top: 20px;
+      max-height: 200px;
+      overflow-y: auto;
+      width: 300px;
+      background: #1e1e2f;
+      padding: 10px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h2>🧭 Roblox Command Center</h2>
+
+  <canvas id="minimap" width="300" height="300"></canvas>
+  <canvas id="compass" width="150" height="150"></canvas>
+
+  <div class="controls">
+    <button onclick="sendMove('forward')">⬆️ Forward</button>
+    <button onclick="sendMove('left')">⬅️ Left</button>
+    <button onclick="sendMove('right')">➡️ Right</button>
+    <button onclick="sendMove('back')">⬇️ Back</button>
+  </div>
+
+  <div class="player-list" id="playerList">
+    <strong>👥 Players:</strong>
+    <div id="players"></div>
+  </div>
+
+  <script>
+    const minimap = document.getElementById('minimap').getContext('2d');
+    const compass = document.getElementById('compass').getContext('2d');
+
+    async function fetchData() {
+      const res = await fetch('http://localhost:3000/data');
+      const data = await res.json();
+
+      drawMinimap(data.players);
+      drawCompass(data.localPlayer.velocity);
+      updatePlayerList(data.players);
+    }
+
+    function drawMinimap(players) {
+      minimap.clearRect(0, 0, 300, 300);
+      players.forEach(p => {
+        const x = p.position.x % 300;
+        const y = p.position.z % 300;
+        minimap.fillStyle = p.name === 'You' ? '#00ffcc' : '#ff5252';
+        minimap.beginPath();
+        minimap.arc(x, y, 5, 0, Math.PI * 2);
+        minimap.fill();
+      });
+    }
+
+    function drawCompass(velocity) {
+      compass.clearRect(0, 0, 150, 150);
+      compass.strokeStyle = '#00bcd4';
+      compass.beginPath();
+      compass.moveTo(75, 75);
+      compass.lineTo(75 + velocity.x, 75 - velocity.z);
+      compass.stroke();
+    }
+
+    function updatePlayerList(players) {
+      const list = document.getElementById('players');
+      list.innerHTML = '';
+      players.forEach(p => {
+        const div = document.createElement('div');
+        div.textContent = `${p.name}: (${p.position.x.toFixed(1)}, ${p.position.y.toFixed(1)}, ${p.position.z.toFixed(1)})`;
+        list.appendChild(div);
+      });
+    }
+
+    async function sendMove(dir) {
+      await fetch('http://localhost:3000/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ direction: dir })
+      });
+    }
+
+    setInterval(fetchData, 500);
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowUp') sendMove('forward');
+      if (e.key === 'ArrowDown') sendMove('back');
+      if (e.key === 'ArrowLeft') sendMove('left');
+      if (e.key === 'ArrowRight') sendMove('right');
+    });
+  </script>
+</body>
+</html>
